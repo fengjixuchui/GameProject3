@@ -9,6 +9,7 @@
 #define  NET_OP_CONNECT				3
 #define  NET_OP_ACCEPT				4
 #define  NET_OP_POST				5
+#define  NET_OP_UDP_RECV            6
 
 #define RECV_BUF_SIZE               8192
 #define MAX_BUFF_SIZE				32768
@@ -102,8 +103,6 @@ public:
 
 	ArrayLockFreeQueue < IDataBuffer* > m_SendBuffList;
 
-
-
 	BOOL				        m_IsSending;
 
 	//LINUX下专用， 用于发了一半的包
@@ -129,7 +128,9 @@ public:
 
 	BOOL		    DeleteConnection(CConnection* pConnection);
 
-	CConnection*    GetConnectionByConnID(UINT32 dwConnID);
+	BOOL            DeleteConnection(UINT32 nConnID);
+
+	CConnection*    GetConnectionByID(UINT32 dwConnID);
 
 	///////////////////////////////////////////
 	BOOL		    CloseAllConnection();

@@ -118,8 +118,10 @@ BOOL CNetManager::Start(UINT16 nPortNum, UINT32 nMaxConn, IDataHandler* pBufferH
 	return TRUE;
 }
 
-BOOL CNetManager::Close()
+BOOL CNetManager::Stop()
 {
+	uv_close((uv_handle_t*)&m_ListenSocket, NULL);
+
 	uv_stop(m_pMainLoop);
 	uv_loop_close(m_pMainLoop);
 	uv_thread_join(&m_LoopThreadID);
@@ -167,7 +169,7 @@ CConnection* CNetManager::ConnectTo_Async( std::string strIpAddr, UINT16 sPort )
 
 void CNetManager::HandleConnect(CConnection* pConnection, INT32 dwStatus)
 {
-	m_pBufferHandler->OnNewConnect(pConnection);
+	m_pBufferHandler->OnNewConnect(pConnection->GetConnectionID());
 
 	pConnection->DoReceive();
 
@@ -178,7 +180,7 @@ void CNetManager::HandleAccept(CConnection* pConnection, INT32 dwStatus)
 {
 	if (dwStatus == 0)
 	{
-		m_pBufferHandler->OnNewConnect(pConnection);
+		m_pBufferHandler->OnNewConnect(pConnection->GetConnectionID());
 
 		pConnection->DoReceive();
 	}
@@ -203,7 +205,7 @@ BOOL	CNetManager::SendMessageBuff(UINT32 dwConnID, IDataBuffer* pBuffer)
 {
 	ERROR_RETURN_FALSE(dwConnID != 0);
 	ERROR_RETURN_FALSE(pBuffer != 0);
-	CConnection* pConn = CConnectionMgr::GetInstancePtr()->GetConnectionByConnID(dwConnID);
+	CConnection* pConn = CConnectionMgr::GetInstancePtr()->GetConnectionByID(dwConnID);
 	if (pConn == NULL)
 	{
 		//表示连接己经失败断开了，这个连接ID不可用了。
@@ -233,7 +235,7 @@ BOOL CNetManager::SendMessageData(UINT32 dwConnID, UINT32 dwMsgID, UINT64 u64Tar
 		return FALSE;
 	}
 
-	CConnection* pConn = CConnectionMgr::GetInstancePtr()->GetConnectionByConnID(dwConnID);
+	CConnection* pConn = CConnectionMgr::GetInstancePtr()->GetConnectionByID(dwConnID);
 	if (pConn == NULL)
 	{
 		//表示连接己经失败断开了，这个连接ID不可用了。
@@ -279,7 +281,7 @@ BOOL CNetManager::PostSendOperation(CConnection* pConnection)
 	{
 		uv_async_init(m_pMainLoop, &pConnection->m_AsyncReq, On_Async_Event);
 
-		pConnection->m_AsyncReq.data = pConnection;
+		uv_handle_set_data((uv_handle_t*)&pConnection->m_AsyncReq, (void*)pConnection);
 
 		uv_async_send(&pConnection->m_AsyncReq);
 	}

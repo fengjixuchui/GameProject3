@@ -17,6 +17,7 @@ CNetManager::CNetManager(void)
 
 CNetManager::~CNetManager(void)
 {
+	m_pBufferHandler = NULL;
 }
 
 BOOL CNetManager::Start(UINT16 nPortNum, UINT32 nMaxConn, IDataHandler* pBufferHandler, std::string& strListenIp)
@@ -34,7 +35,9 @@ BOOL CNetManager::Start(UINT16 nPortNum, UINT32 nMaxConn, IDataHandler* pBufferH
 
 	boost::asio::ip::tcp::endpoint ep(boost::asio::ip::address_v4::from_string(strListenIp), nPortNum);
 
-	m_pAcceptor = new boost::asio::ip::tcp::acceptor(m_IoService, ep);
+	m_pAcceptor = new boost::asio::ip::tcp::acceptor(m_IoService, ep, true);
+
+	//m_pAcceptor->set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
 
 	WaitForConnect();
 
@@ -43,9 +46,21 @@ BOOL CNetManager::Start(UINT16 nPortNum, UINT32 nMaxConn, IDataHandler* pBufferH
 	return TRUE;
 }
 
-BOOL CNetManager::Close()
+BOOL CNetManager::Stop()
 {
 	m_IoService.stop();
+
+	m_pAcceptor->close();
+
+	delete m_pAcceptor;
+
+	m_pAcceptor = NULL;
+
+	m_pWorkThread->join();
+
+	delete m_pWorkThread;
+
+	m_pWorkThread = NULL;
 
 	CConnectionMgr::GetInstancePtr()->CloseAllConnection();
 
@@ -99,7 +114,7 @@ void CNetManager::HandleConnect(CConnection* pConnection, const boost::system::e
 {
 	if (!e)
 	{
-		m_pBufferHandler->OnNewConnect(pConnection);
+		m_pBufferHandler->OnNewConnect(pConnection->GetConnectionID());
 
 		pConnection->DoReceive();
 	}
@@ -115,7 +130,7 @@ void CNetManager::HandleAccept(CConnection* pConnection, const boost::system::er
 {
 	if (!e)
 	{
-		m_pBufferHandler->OnNewConnect(pConnection);
+		m_pBufferHandler->OnNewConnect(pConnection->GetConnectionID());
 
 		pConnection->DoReceive();
 
@@ -134,7 +149,7 @@ BOOL	CNetManager::SendMessageBuff(UINT32 dwConnID, IDataBuffer* pBuffer)
 {
 	ERROR_RETURN_FALSE(dwConnID != 0);
 	ERROR_RETURN_FALSE(pBuffer != 0);
-	CConnection* pConn = CConnectionMgr::GetInstancePtr()->GetConnectionByConnID(dwConnID);
+	CConnection* pConn = CConnectionMgr::GetInstancePtr()->GetConnectionByID(dwConnID);
 	if (pConn == NULL)
 	{
 		//表示连接己经失败断开了，这个连接ID不可用了。
@@ -164,7 +179,7 @@ BOOL CNetManager::SendMessageData(UINT32 dwConnID, UINT32 dwMsgID, UINT64 u64Tar
 		return FALSE;
 	}
 
-	CConnection* pConn = CConnectionMgr::GetInstancePtr()->GetConnectionByConnID(dwConnID);
+	CConnection* pConn = CConnectionMgr::GetInstancePtr()->GetConnectionByID(dwConnID);
 	if (pConn == NULL)
 	{
 		//表示连接己经失败断开了，这个连接ID不可用了。

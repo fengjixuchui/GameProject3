@@ -97,13 +97,16 @@ BOOL CProxyMsgHandler::DispatchPacket(NetPacket* pNetPacket)
 	return TRUE;
 }
 
-BOOL CProxyMsgHandler::OnNewConnect(CConnection* pConn)
+BOOL CProxyMsgHandler::OnNewConnect(UINT32 nConnID)
 {
 	return TRUE;
 }
 
-BOOL CProxyMsgHandler::OnCloseConnect(CConnection* pConn)
+BOOL CProxyMsgHandler::OnCloseConnect(UINT32 nConnID)
 {
+	CConnection* pConn = ServiceBase::GetInstancePtr()->GetConnectionByID(nConnID);
+	ERROR_RETURN_FALSE(pConn != NULL);
+
 	if(pConn->GetConnectionData() == 0)
 	{
 		return TRUE;
@@ -229,7 +232,6 @@ BOOL CProxyMsgHandler::OnMsgEnterSceneReq(NetPacket* pNetPacket)
 	ERROR_RETURN_TRUE(dwConnID != 0)
 	pPacketHeader->u64TargetID = pNetPacket->m_dwConnID;
 	RelayToConnect(dwConnID, pNetPacket->m_pDataBuffer);
-	RelayToLogicServer(pNetPacket->m_pDataBuffer);
 	return TRUE;
 }
 

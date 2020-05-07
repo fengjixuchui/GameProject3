@@ -106,7 +106,9 @@ public:
 
 	BOOL		    DeleteConnection(CConnection* pConnection);
 
-	CConnection*    GetConnectionByConnID(UINT32 dwConnID);
+	BOOL            DeleteConnection(UINT32 nConnID);
+
+	CConnection*    GetConnectionByID(UINT32 dwConnID);
 
 	///////////////////////////////////////////
 	BOOL		    CloseAllConnection();

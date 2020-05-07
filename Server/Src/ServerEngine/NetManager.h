@@ -18,7 +18,7 @@ public:
 public:
 	BOOL	Start(UINT16 nPortNum,  UINT32 nMaxConn, IDataHandler* pBufferHandler);
 
-	BOOL	Close();
+	BOOL	Stop();
 
 	BOOL	SendMessageData(UINT32 dwConnID,  UINT32 dwMsgID, UINT64 u64TargetID, UINT32 dwUserData,  const char* pData, UINT32 dwLen);
 
@@ -56,15 +56,16 @@ public:
 
 	CConnection*	ConnectTo_Async(std::string strIpAddr, UINT16 sPort);
 
+	BOOL            WaitConnect();
 public:
 	SOCKET				m_hListenSocket;
-
+	NetIoOperatorData	m_IoOverlapAccept;
+	SOCKET              m_hCurAcceptSocket;
 	HANDLE				m_hCompletePort;
-
+	CHAR                m_AddressBuf[128];
 	BOOL				m_bCloseEvent;		//是否关闭事件处理线程
 
 	IDataHandler*		m_pBufferHandler;
-	std::thread*	    m_pListenThread;
 	std::vector<std::thread*> m_vtEventThread;
 
 #ifndef WIN32

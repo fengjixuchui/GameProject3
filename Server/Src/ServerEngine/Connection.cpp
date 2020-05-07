@@ -19,15 +19,15 @@ void NetIoOperatorData::Reset()
 
 CConnection::CConnection()
 {
-	m_hSocket			= INVALID_SOCKET;
+	m_hSocket           = INVALID_SOCKET;
 
-	m_pDataHandler		= NULL;
+	m_pDataHandler      = NULL;
 
-	m_dwDataLen			= 0;
+	m_dwDataLen         = 0;
 
-	m_bConnected		= FALSE;
+	m_bConnected        = FALSE;
 
-	m_u64ConnData        = 0;
+	m_u64ConnData       = 0;
 
 	m_dwConnID          = 0;
 
@@ -37,11 +37,11 @@ CConnection::CConnection()
 
 	m_nCheckNo          = 0;
 
-	m_IsSending			= FALSE;
+	m_IsSending         = FALSE;
 
-	m_pSendingBuffer	= NULL;
+	m_pSendingBuffer    = NULL;
 
-	m_nSendingPos		= 0;
+	m_nSendingPos       = 0;
 }
 
 CConnection::~CConnection(void)
@@ -192,7 +192,7 @@ BOOL CConnection::ExtractBuffer()
 				m_dwDataLen -= m_pCurBufferSize - m_pCurRecvBuffer->GetTotalLenth();
 				m_pBufPos += m_pCurBufferSize - m_pCurRecvBuffer->GetTotalLenth();
 				m_pCurRecvBuffer->SetTotalLenth(m_pCurBufferSize);
-				m_pDataHandler->OnDataHandle(m_pCurRecvBuffer, this);
+				m_pDataHandler->OnDataHandle(m_pCurRecvBuffer, GetConnectionID());
 				m_pCurRecvBuffer = NULL;
 			}
 		}
@@ -232,7 +232,7 @@ BOOL CConnection::ExtractBuffer()
 
 			pDataBuffer->SetTotalLenth(dwPacketSize);
 
-			m_pDataHandler->OnDataHandle(pDataBuffer, this);
+			m_pDataHandler->OnDataHandle(pDataBuffer, GetConnectionID());
 		}
 		else
 		{
@@ -273,7 +273,7 @@ BOOL CConnection::Close()
 
 	if(m_pDataHandler != NULL)
 	{
-		m_pDataHandler->OnCloseConnect(this);
+		m_pDataHandler->OnCloseConnect(GetConnectionID());
 	}
 
 	m_bConnected = FALSE;
@@ -420,7 +420,7 @@ BOOL CConnection::CheckHeader(CHAR* m_pPacket)
 	}
 	else
 	{
-	if(pHeader->dwPacketNo = pHeader->wCommandID^pHeader->dwSize+m_nCheckNo)
+	if(pHeader->dwPacketNo == pHeader->wCommandID^pHeader->dwSize+m_nCheckNo)
 	{
 	m_nCheckNo += 1;
 	}
@@ -643,7 +643,7 @@ CConnection* CConnectionMgr::CreateConnection()
 	return pTemp;
 }
 
-CConnection* CConnectionMgr::GetConnectionByConnID( UINT32 dwConnID )
+CConnection* CConnectionMgr::GetConnectionByID( UINT32 dwConnID )
 {
 	ERROR_RETURN_NULL(dwConnID != 0);
 
@@ -698,6 +698,15 @@ BOOL CConnectionMgr::DeleteConnection(CConnection* pConnection)
 	pConnection->SetConnectionID(dwConnID);
 
 	return TRUE;
+}
+
+BOOL CConnectionMgr::DeleteConnection(UINT32 nConnID)
+{
+	ERROR_RETURN_FALSE(nConnID != 0);
+	CConnection* pConnection = GetConnectionByID(nConnID);
+	ERROR_RETURN_FALSE(pConnection != NULL);
+
+	return DeleteConnection(pConnection);
 }
 
 BOOL CConnectionMgr::CloseAllConnection()

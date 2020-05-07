@@ -17,9 +17,9 @@ public:
 
 	BOOL		Run();
 
-	BOOL		OnNewConnect(CConnection* pConn);
+	BOOL		OnNewConnect(UINT32 nConnID);
 
-	BOOL		OnCloseConnect(CConnection* pConn);
+	BOOL		OnCloseConnect(UINT32 nConnID);
 
 	BOOL		OnSecondTimer();
 
@@ -65,7 +65,8 @@ public:
 	UINT32			m_dwWatchIndex;
 public:
 	//*********************消息处理定义开始******************************
-
+	BOOL        OnMsgRegToLoginAck(NetPacket* pNetPacket);
+	BOOL        OnMsgRegToCenterAck(NetPacket* pNetPacket);
 	//*********************消息处理定义结束******************************
 };
 

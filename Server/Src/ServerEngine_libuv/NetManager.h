@@ -1,7 +1,7 @@
 ﻿#ifndef _NET_MANAGER_H_
 #define _NET_MANAGER_H_
 #include "IBufferHandler.h"
-
+#include "Connection.h"
 ////////////////////////////////////////////////
 class CNetManager
 {
@@ -18,7 +18,7 @@ public:
 public:
 	BOOL	Start(UINT16 nPortNum,  UINT32 nMaxConn, IDataHandler* pBufferHandler, std::string& strListenIp);
 
-	BOOL	Close();
+	BOOL	Stop();
 
 	BOOL	SendMessageData(UINT32 dwConnID,  UINT32 dwMsgID, UINT64 u64TargetID, UINT32 dwUserData,  const char* pData, UINT32 dwLen);
 
@@ -40,9 +40,9 @@ public:
 	uv_tcp_t						m_ListenSocket;
 	uv_loop_t*						m_pMainLoop;
 	uv_thread_t						m_LoopThreadID;
+	IDataHandler*					m_pBufferHandler;
 
 public:
-	IDataHandler*					m_pBufferHandler;
 };
 
 #endif

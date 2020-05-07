@@ -53,6 +53,16 @@ BOOL CGameService::SetWatchIndex(UINT32 nIndex)
 	return TRUE;
 }
 
+BOOL CGameService::OnMsgRegToLoginAck(NetPacket* pNetPacket)
+{
+	return TRUE;
+}
+
+BOOL CGameService::OnMsgRegToCenterAck(NetPacket* pNetPacket)
+{
+	return TRUE;
+}
+
 BOOL CGameService::Init()
 {
 	CommonFunc::SetCurrentWorkDir("");
@@ -282,14 +292,14 @@ BOOL CGameService::RegisterToCenterSvr()
 	return ServiceBase::GetInstancePtr()->SendMsgProtoBuf(m_dwCenterID, MSG_LOGIC_REGTO_CENTER_REQ, 0, 0, Req);
 }
 
-BOOL CGameService::OnNewConnect(CConnection* pConn)
+BOOL CGameService::OnNewConnect(UINT32 nConnID)
 {
-	if(pConn->GetConnectionID() == m_dwLoginConnID)
+	if(nConnID == m_dwLoginConnID)
 	{
 		RegisterToLoginSvr();
 	}
 
-	if(pConn->GetConnectionID() == m_dwCenterID)
+	if(nConnID == m_dwCenterID)
 	{
 		RegisterToCenterSvr();
 	}
@@ -297,38 +307,38 @@ BOOL CGameService::OnNewConnect(CConnection* pConn)
 	return TRUE;
 }
 
-BOOL CGameService::OnCloseConnect(CConnection* pConn)
+BOOL CGameService::OnCloseConnect(UINT32 nConnID)
 {
-	if(m_dwLoginConnID == pConn->GetConnectionID())
+	if(m_dwLoginConnID == nConnID)
 	{
 		m_dwLoginConnID = 0;
 		return TRUE;
 	}
 
-	if(m_dwLogConnID == pConn->GetConnectionID())
+	if(m_dwLogConnID == nConnID)
 	{
 		m_dwLogConnID = 0;
 		return TRUE;
 	}
 
-	if(m_dwDBConnID == pConn->GetConnectionID())
+	if(m_dwDBConnID == nConnID)
 	{
 		m_dwDBConnID = 0;
 		return TRUE;
 	}
 
-	if(m_dwCenterID == pConn->GetConnectionID())
+	if(m_dwCenterID == nConnID)
 	{
 		m_dwCenterID = 0;
 		return TRUE;
 	}
 
-	if (pConn->GetConnectionID() == m_dwWatchSvrConnID)
+	if (m_dwWatchSvrConnID == nConnID)
 	{
 		m_dwWatchSvrConnID = 0;
 	}
 
-	CGameSvrMgr::GetInstancePtr()->OnCloseConnect(pConn->GetConnectionID());
+	CGameSvrMgr::GetInstancePtr()->OnCloseConnect(nConnID);
 
 	return TRUE;
 }
@@ -397,19 +407,20 @@ UINT32 CGameService::GetCenterID()
 
 BOOL CGameService::ReportServerStatus()
 {
-	CGlobalDataManager::GetInstancePtr()->GetMaxOnline(); //最大在线人数
-	CSimpleManager::GetInstancePtr()->GetTotalCount();//总人数
-	CSimpleManager::GetInstancePtr()->GetOnline();
-	// 	LogicRegToLoginReq Req;
-	UINT32 dwServerID = CConfigFile::GetInstancePtr()->GetIntValue("areaid");
-	std::string strSvrName = CConfigFile::GetInstancePtr()->GetStringValue("areaname");
-	// 	Req.set_serverid(dwServerID);
-	// 	Req.set_serverport(dwPort);
-	// 	Req.set_serverip(strIp);
-	// 	Req.set_servername(strSvrName);
-	// 	Req.set_httpport(dwHttpPort);
-	// 	Req.set_watchport(dwWatchPort);
-	// 	return ServiceBase::GetInstancePtr()->SendMsgProtoBuf(m_dwLoginConnID, MSG_LOGIC_REGTO_LOGIN_REQ, 0, 0, Req);
+	if (m_dwLoginConnID <= 0)
+	{
+		return TRUE;
+	}
+
+	LogicUpdateInfoReq Req;
+
+	Req.set_maxonline(CGlobalDataManager::GetInstancePtr()->GetMaxOnline()); //最大在线人数
+	Req.set_curonline(CSimpleManager::GetInstancePtr()->GetOnline());
+	Req.set_totalnum(CSimpleManager::GetInstancePtr()->GetTotalCount());
+	Req.set_serverid(CConfigFile::GetInstancePtr()->GetIntValue("areaid"));
+	Req.set_servername(CConfigFile::GetInstancePtr()->GetStringValue("areaname"));
+
+	return ServiceBase::GetInstancePtr()->SendMsgProtoBuf(m_dwLoginConnID, MSG_LOGIC_UPDATE_REQ, 0, 0, Req);
 
 	return TRUE;
 }
