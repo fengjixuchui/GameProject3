@@ -19,7 +19,11 @@ INT64 CommonConvert::StringToInt64(char* pStr)
 		return 0;
 	}
 
-	return atol(pStr);
+#ifdef WIN32
+	return _atoi64(pStr);
+#else
+	return atoll(pStr);
+#endif
 }
 
 INT64 CommonConvert::StringToInt64(const char* pStr)
@@ -519,7 +523,7 @@ BOOL CommonConvert::IsTextUTF8(const char* str, UINT32 length)
 	return TRUE;
 }
 
-UINT32 CommonConvert::VersionToInt( std::string& strVersion )
+UINT32 CommonConvert::VersionToInt(const std::string& strVersion )
 {
 	INT32 nValue[3] = { 0 };
 	StringToVector(strVersion.c_str(), nValue, 3, '.');
