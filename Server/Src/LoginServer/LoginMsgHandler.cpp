@@ -7,6 +7,7 @@
 #include "../Message/Msg_Game.pb.h"
 #include "HttpParameter.h"
 #include "LoginClientMgr.h"
+#include "WebCommandMgr.h"
 
 CLoginMsgHandler::CLoginMsgHandler()
 {
@@ -49,8 +50,7 @@ BOOL CLoginMsgHandler::DispatchPacket(NetPacket* pNetPacket)
 			PROCESS_MESSAGE_ITEM(MSG_LOGIC_REGTO_LOGIN_REQ, OnMsgLogicSvrRegReq);
 			PROCESS_MESSAGE_ITEM(MSG_LOGIC_UPDATE_REQ,      OnMsgLogicUpdateReq);
 			PROCESS_MESSAGE_ITEM(MSG_SELECT_SERVER_ACK,     OnMsgSelectServerAck);
-			PROCESS_MESSAGE_ITEM(MSG_SEAL_ACCOUNT_ACK,      OnMsgSealAccountAck);
-			PROCESS_MESSAGE_ITEM(MSG_PHP_GM_COMMAND_REQ,    OnMsgWebCommandReq);
+
 	}
 
 	return FALSE;
@@ -85,6 +85,11 @@ BOOL CLoginMsgHandler::OnMsgAccountRegReq(NetPacket* pPacket )
 	UINT32 nConnID = pPacket->m_dwConnID;
 	ERROR_RETURN_TRUE(nConnID != 0);
 
+	CConnection* pConnection = ServiceBase::GetInstancePtr()->GetConnectionByID(nConnID);
+	ERROR_RETURN_TRUE(pConnection != 0);
+
+	Req.mutable_reglog()->set_ipaddr(pConnection->GetIpAddr(FALSE));
+
 	CGameService::GetInstancePtr()->SendCmdToAccountConnection(MSG_ACCOUNT_REG_REQ, 0, nConnID, Req);
 	return TRUE;
 }
@@ -97,6 +102,11 @@ BOOL CLoginMsgHandler::OnMsgAccountLoginReq(NetPacket* pPacket)
 
 	UINT32 nConnID = pPacket->m_dwConnID;
 	ERROR_RETURN_TRUE(nConnID != 0);
+
+	CConnection* pConnection = ServiceBase::GetInstancePtr()->GetConnectionByID(nConnID);
+	ERROR_RETURN_TRUE(pConnection != 0);
+
+	Req.mutable_loginlog()->set_ipaddr(pConnection->GetIpAddr(FALSE));
 
 	CGameService::GetInstancePtr()->SendCmdToAccountConnection(MSG_ACCOUNT_LOGIN_REQ, 0, nConnID, Req);
 
@@ -256,7 +266,7 @@ BOOL CLoginMsgHandler::OnMsgLogicUpdateReq(NetPacket* pPacket)
 {
 	LogicUpdateInfoReq Req;
 	Req.ParsePartialFromArray(pPacket->m_pDataBuffer->GetData(), pPacket->m_pDataBuffer->GetBodyLenth());
-	m_LogicSvrMgr.UpdateLogicServerInfo(Req.serverid(), Req.maxonline(), Req.curonline(), Req.totalnum(), Req.status(), Req.servername());
+	m_LogicSvrMgr.UpdateLogicServerInfo(Req.serverid(), Req.maxonline(), Req.curonline(), Req.totalnum(), Req.cachenum(), Req.status(), Req.servername());
 	//LogicUpdateInfoAck Ack;
 	//Ack.set_retcode(MRC_SUCCESSED);
 	//ServiceBase::GetInstancePtr()->SendMsgProtoBuf(pPacket->m_dwConnID, MSG_LOGIC_UPDATE_ACK, 0, 0, Ack);
@@ -287,16 +297,3 @@ BOOL CLoginMsgHandler::OnMsgSelectServerAck(NetPacket* pPacket)
 	return TRUE;
 }
 
-BOOL CLoginMsgHandler::OnMsgSealAccountAck(NetPacket* pPacket)
-{
-	SealAccountAck Ack;
-	Ack.ParsePartialFromArray(pPacket->m_pDataBuffer->GetData(), pPacket->m_pDataBuffer->GetBodyLenth());
-	PacketHeader* pHeader = (PacketHeader*)pPacket->m_pDataBuffer->GetBuffer();
-
-	UINT32 nConnID = pHeader->dwUserData;
-	ERROR_RETURN_TRUE(nConnID != 0);
-
-	ServiceBase::GetInstancePtr()->SendMsgProtoBuf(nConnID, MSG_SEAL_ACCOUNT_ACK, 0, 0, Ack);
-
-	return TRUE;
-}

@@ -5,6 +5,7 @@
 #include "../Message/Msg_RetCode.pb.h"
 #include "../Message/Msg_ID.pb.h"
 #include "LoginClientMgr.h"
+#include "WebCommandMgr.h"
 CGameService::CGameService(void)
 {
 	m_dwAccountConnID	= 0;
@@ -51,12 +52,21 @@ BOOL CGameService::Init()
 	CLog::GetInstancePtr()->SetLogLevel(CConfigFile::GetInstancePtr()->GetIntValue("login_log_level"));
 
 	UINT16 nPort = CConfigFile::GetInstancePtr()->GetIntValue("login_svr_port");
+	if (nPort <= 0)
+	{
+		CLog::GetInstancePtr()->LogError("配制文件login_svr_port配制错误!");
+		return FALSE;
+	}
+
 	INT32  nMaxConn = CConfigFile::GetInstancePtr()->GetIntValue("login_svr_max_con");
 	if(!ServiceBase::GetInstancePtr()->StartNetwork(nPort, nMaxConn, this))
 	{
 		CLog::GetInstancePtr()->LogError("启动服务失败!");
 		return FALSE;
 	}
+
+	BOOL bRet = CWebCommandMgr::GetInstancePtr()->Init();
+	ERROR_RETURN_FALSE(bRet);
 
 	m_LoginMsgHandler.Init();
 
@@ -150,6 +160,11 @@ BOOL CGameService::DispatchPacket(NetPacket* pNetPacket)
 			PROCESS_MESSAGE_ITEM(MSG_WATCH_HEART_BEAT_ACK, OnMsgWatchHeartBeatAck)
 	}
 
+	if (CWebCommandMgr::GetInstancePtr()->DispatchPacket(pNetPacket))
+	{
+		return TRUE;
+	}
+
 	if (m_LoginMsgHandler.DispatchPacket(pNetPacket))
 	{
 		return TRUE;
@@ -199,7 +214,7 @@ BOOL CGameService::ConnectToWatchServer()
 	{
 		return TRUE;
 	}
-	UINT32 nWatchPort = CConfigFile::GetInstancePtr()->GetIntValue("watch_svr_port");
+	UINT32 nWatchPort = CConfigFile::GetInstancePtr()->GetRealNetPort("watch_svr_port");
 	std::string strWatchIp = CConfigFile::GetInstancePtr()->GetStringValue("watch_svr_ip");
 	CConnection* pConnection = ServiceBase::GetInstancePtr()->ConnectTo(strWatchIp, nWatchPort);
 	ERROR_RETURN_FALSE(pConnection != NULL);
