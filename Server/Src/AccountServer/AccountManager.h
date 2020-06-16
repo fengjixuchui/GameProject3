@@ -6,13 +6,13 @@
 
 struct CAccountObject
 {
-	UINT64		m_ID;
+	UINT64		m_ID = 0;
 	std::string m_strName;
 	std::string m_strPassword;
-	UINT32      m_dwLastSvrID;
-	UINT32      m_dwChannel;	//渠道ID
-	UINT64		m_uSealTime;    //封禁结束时间
-	UINT64      m_uCreateTime;  //创建时间
+	UINT32      m_dwLastSvrID[2] = {0};
+	UINT32      m_dwChannel = 0;	//渠道ID
+	UINT64		m_uSealTime = 0;    //封禁结束时间
+	UINT64      m_uCreateTime = 0;  //创建时间
 };
 
 
@@ -52,8 +52,6 @@ public:
 	std::map<std::string, CAccountObject*>	m_mapNameObj;
 
 	ArrayLockFreeQueue<CAccountObject*>		m_ArrChangedAccount;
-
-	CppMySQL3DB 		m_DBConnection;
 
 	BOOL				m_IsRun;
 

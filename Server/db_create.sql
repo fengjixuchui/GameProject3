@@ -22,11 +22,12 @@ CREATE TABLE `account` (
   `id` bigint(20) NOT NULL,
   `name` char(255) NOT NULL DEFAULT '0' ,
   `password` char(20) NOT NULL DEFAULT '0' ,
-  `lastsvrid` int(11) NOT NULL DEFAULT '0' ,
-  `channel` int(20) NOT NULL DEFAULT '0',
+  `lastsvrid1` int(11) NOT NULL DEFAULT 0,
+  `lastsvrid2` int(11) NULL DEFAULT NULL,
+  `channel` int(11) NOT NULL DEFAULT 0,
   `logincount` int(11) unsigned NOT NULL DEFAULT '0' ,
-  `create_time` int(11) NOT NULL DEFAULT '0',
-  `seal_end_time` int(11) NOT NULL DEFAULT '0',
+  `create_time` datetime(0) NOT NULL,
+  `seal_end_time` datetime(0) NOT NULL,
   `seal_describle` varchar(255) DEFAULT '' ,
   PRIMARY KEY (`id`),
   KEY `id` (`id`) USING BTREE,
@@ -429,6 +430,79 @@ CREATE TABLE `admin_user`  (
 -- Records of admin_user
 -- ----------------------------
 INSERT INTO `admin_user` VALUES ('b21e146e-37f0-4d97-89f9-4686ea46b70f', '43163187-f63f-409a-807c-7723d5919b62', 'admin', '21232f297a57a5a743894a0e4a801fc3', 0, 1419316797, 1572058131, 0, 'nbboa27pncmg3upna0egjjcme2', 20, 0);
+-- ----------------------------
+-- Table structure for gm_command
+-- ----------------------------
+DROP TABLE IF EXISTS `gm_command`;
+CREATE TABLE `gm_command`  (
+  `id` int(6) NOT NULL AUTO_INCREMENT,
+  `area_host` char(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `area_name` char(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `role_name` char(20) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `gm_command` char(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `insert_time` datetime(0) NULL DEFAULT NULL,
+  `managername` char(50) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `description` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for mail_data
+-- ----------------------------
+DROP TABLE IF EXISTS `mail_data`;
+CREATE TABLE `mail_data`  (
+  `autoid` int(6) NOT NULL AUTO_INCREMENT COMMENT '标识ID',
+  `platform` int(6) NULL DEFAULT NULL,
+  `area_host` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '区号',
+  `type` int(1) NULL DEFAULT NULL COMMENT '0为单发，1为群发',
+  `reciver_name` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '玩家名称',
+  `mail_title` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '邮件标题',
+  `keep_time` int(3) NULL DEFAULT NULL COMMENT '客户端保存时间',
+  `mail_content` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '邮件内容',
+  `itemid1` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附加1',
+  `itemid2` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附加2',
+  `itemid3` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附加3',
+  `itemid4` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附加4',
+  `reciver_group` int(1) NULL DEFAULT NULL COMMENT '0为区所有玩家，1为工会',
+  `group_name` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '团队名称',
+  `insert_time` datetime(0) NULL DEFAULT NULL COMMENT '添加时间',
+  `receiver_id` varchar(16) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `reason` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `sendmanager` varchar(16) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `language` int(11) NOT NULL DEFAULT 0,
+  `sendtime` datetime(0) NULL DEFAULT NULL,
+  `sendstatus` int(11) NULL DEFAULT NULL,
+  PRIMARY KEY (`autoid`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for mail_data_backup
+-- ----------------------------
+DROP TABLE IF EXISTS `mail_data_backup`;
+CREATE TABLE `mail_data_backup`  (
+  `autoid` int(6) NOT NULL AUTO_INCREMENT COMMENT '标识ID',
+  `platform` int(6) NULL DEFAULT NULL,
+  `area_host` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '区号',
+  `type` int(1) NULL DEFAULT NULL COMMENT '0为单发，1为群发',
+  `reciver_name` varchar(32) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '玩家名称',
+  `mail_title` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '邮件标题',
+  `keep_time` int(3) NULL DEFAULT NULL COMMENT '客户端保存时间',
+  `mail_content` text CHARACTER SET utf8 COLLATE utf8_general_ci NULL COMMENT '邮件内容',
+  `itemid1` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附加1',
+  `itemid2` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附加2',
+  `itemid3` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附加3',
+  `itemid4` varchar(128) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '附加4',
+  `reciver_group` int(1) NULL DEFAULT NULL COMMENT '0为区所有玩家，1为工会',
+  `group_name` varchar(64) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '团队名称',
+  `insert_time` datetime(0) NULL DEFAULT NULL COMMENT '添加时间',
+  `receiver_id` varchar(16) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `reason` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `sendmanager` varchar(16) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `language` int(11) NOT NULL DEFAULT 0,
+  `sendtime` datetime(0) NULL DEFAULT NULL,
+  `sendstatus` int(11) NULL DEFAULT NULL,
+  PRIMARY KEY (`autoid`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for review_client
@@ -442,10 +516,10 @@ CREATE TABLE `review_client`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
--- Table structure for sealaccount
+-- Table structure for seal_account
 -- ----------------------------
 DROP TABLE IF EXISTS `seal_account`;
-CREATE TABLE `sealaccount`  (
+CREATE TABLE `seal_account`  (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `accountid` bigint(11) NULL DEFAULT NULL,
   `accountname` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
@@ -461,7 +535,7 @@ CREATE TABLE `sealaccount`  (
 -- Table structure for sealplayer
 -- ----------------------------
 DROP TABLE IF EXISTS `seal_player`;
-CREATE TABLE `sealplayer`  (
+CREATE TABLE `seal_player`  (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `areaid` int(11) NULL DEFAULT NULL COMMENT '区号',
   `accountid` bigint(50) NULL DEFAULT NULL,
@@ -502,13 +576,14 @@ DROP TABLE IF EXISTS `server_list`;
 CREATE TABLE `server_list`  (
   `id` int(11) NOT NULL,
   `name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
-  `ip` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `outer_ip` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `inner_ip` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
   `port` int(11) NULL DEFAULT 0,
   `http_port` int(11) NULL DEFAULT NULL,
   `watch_port` int(11) NULL DEFAULT NULL,
   `opentime` bigint(20) NULL DEFAULT 0,
-  `state` int(11) NULL DEFAULT 0,
-  `flag` int(11) NULL DEFAULT 0,
+  `corner_mark` int(11) NULL DEFAULT 0,
+  `svr_flag` int(11) NULL DEFAULT 0,
   `min_version` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '',
   `max_version` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT '',
   `check_chan` varchar(1024) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,

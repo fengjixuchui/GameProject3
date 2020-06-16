@@ -25,13 +25,14 @@ BOOL CAccountObjectMgr::LoadCacheAccount()
 	std::string strDb	= CConfigFile::GetInstancePtr()->GetStringValue("mysql_acc_svr_db_name");
 	m_bCrossChannel		= CConfigFile::GetInstancePtr()->GetIntValue("account_cross_channel");
 
-	if(!m_DBConnection.open(strHost.c_str(), strUser.c_str(), strPwd.c_str(), strDb.c_str(), nPort))
+	CppMySQL3DB tDBConnection;
+	if(!tDBConnection.open(strHost.c_str(), strUser.c_str(), strPwd.c_str(), strDb.c_str(), nPort))
 	{
-		CLog::GetInstancePtr()->LogError("LoadCacheAccount Error: Can not open mysql database! Reason:%s", m_DBConnection.GetErrorMsg());
+		CLog::GetInstancePtr()->LogError("LoadCacheAccount Error: Can not open mysql database! Reason:%s", tDBConnection.GetErrorMsg());
 		return FALSE;
 	}
 
-	CppMySQLQuery QueryResult = m_DBConnection.querySQL("select * from account");
+	CppMySQLQuery QueryResult = tDBConnection.querySQL("select * from account");
 	CAccountObject* pTempObject = NULL;
 	while(!QueryResult.eof())
 	{
@@ -41,10 +42,11 @@ BOOL CAccountObjectMgr::LoadCacheAccount()
 
 		ERROR_RETURN_FALSE(pTempObject != NULL);
 
-		pTempObject->m_strPassword	= QueryResult.getStringField("password");
-		pTempObject->m_uCreateTime	= QueryResult.getInt64Field("create_time");
-		pTempObject->m_uSealTime = QueryResult.getInt64Field("seal_end_time");
-		pTempObject->m_dwLastSvrID = QueryResult.getIntField("lastsvrid");
+		pTempObject->m_strPassword    = QueryResult.getStringField("password");
+		pTempObject->m_uCreateTime    = CommonFunc::DateStringToTime(QueryResult.getStringField("create_time"));
+		pTempObject->m_uSealTime      = CommonFunc::DateStringToTime(QueryResult.getStringField("seal_end_time"));
+		pTempObject->m_dwLastSvrID[0] = QueryResult.getIntField("lastsvrid1");
+		pTempObject->m_dwLastSvrID[1] = QueryResult.getIntField("lastsvrid2");
 		if(m_u64MaxID < (UINT64)QueryResult.getInt64Field("id"))
 		{
 			m_u64MaxID = (UINT64)QueryResult.getInt64Field("id");
@@ -52,6 +54,8 @@ BOOL CAccountObjectMgr::LoadCacheAccount()
 
 		QueryResult.nextRow();
 	}
+
+	tDBConnection.close();
 
 	return TRUE;
 }
@@ -130,9 +134,8 @@ BOOL CAccountObjectMgr::SetLastServer(UINT64 uAccountID, INT32 ServerID)
 
 	CAccountObject* pAccObj = GetAccountObjectByID(uAccountID);
 	ERROR_RETURN_FALSE(pAccObj != NULL);
-
-	pAccObj->m_dwLastSvrID = ServerID;
-
+	pAccObj->m_dwLastSvrID[1] = pAccObj->m_dwLastSvrID[0];
+	pAccObj->m_dwLastSvrID[0] = ServerID;
 	m_ArrChangedAccount.push(pAccObj);
 
 	return TRUE;
@@ -161,6 +164,20 @@ CAccountObject* CAccountObjectMgr::AddAccountObject(UINT64 u64ID, const CHAR* pS
 
 BOOL CAccountObjectMgr::SaveAccountChange()
 {
+	std::string strHost = CConfigFile::GetInstancePtr()->GetStringValue("mysql_acc_svr_ip");
+	UINT32 nPort = CConfigFile::GetInstancePtr()->GetIntValue("mysql_acc_svr_port");
+	std::string strUser = CConfigFile::GetInstancePtr()->GetStringValue("mysql_acc_svr_user");
+	std::string strPwd = CConfigFile::GetInstancePtr()->GetStringValue("mysql_acc_svr_pwd");
+	std::string strDb = CConfigFile::GetInstancePtr()->GetStringValue("mysql_acc_svr_db_name");
+	m_bCrossChannel = CConfigFile::GetInstancePtr()->GetIntValue("account_cross_channel");
+
+	CppMySQL3DB tDBConnection;
+	if (!tDBConnection.open(strHost.c_str(), strUser.c_str(), strPwd.c_str(), strDb.c_str(), nPort))
+	{
+		CLog::GetInstancePtr()->LogError("SaveAccountChange Error: Can not open mysql database! Reason:%s", tDBConnection.GetErrorMsg());
+		return FALSE;
+	}
+
 	while(IsRun())
 	{
 		CAccountObject* pAccount = NULL;
@@ -171,10 +188,10 @@ BOOL CAccountObjectMgr::SaveAccountChange()
 
 			while(m_ArrChangedAccount.pop(pAccount) && (pAccount != NULL))
 			{
-				snprintf(szSql, SQL_BUFF_LEN, "replace into account(id, name, password, lastsvrid, channel, create_time, seal_end_time) values('%lld','%s','%s','%d', '%d', '%lld','%lld')",
-				         pAccount->m_ID, pAccount->m_strName.c_str(), pAccount->m_strPassword.c_str(), pAccount->m_dwLastSvrID, pAccount->m_dwChannel, pAccount->m_uCreateTime, pAccount->m_uSealTime);
+				snprintf(szSql, SQL_BUFF_LEN, "replace into account(id, name, password, lastsvrid1, lastsvrid2, channel, create_time, seal_end_time) values('%lld','%s','%s','%d','%d', '%d', '%s','%s')",
+				         pAccount->m_ID, pAccount->m_strName.c_str(), pAccount->m_strPassword.c_str(), pAccount->m_dwLastSvrID[0], pAccount->m_dwLastSvrID[1], pAccount->m_dwChannel, CommonFunc::TimeToString(pAccount->m_uCreateTime).c_str(), CommonFunc::TimeToString(pAccount->m_uSealTime).c_str());
 
-				if(m_DBConnection.execSQL(szSql) > 0)
+				if(tDBConnection.execSQL(szSql) > 0)
 				{
 					continue;
 				}
@@ -182,7 +199,7 @@ BOOL CAccountObjectMgr::SaveAccountChange()
 				CLog::GetInstancePtr()->LogError("CAccountMsgHandler::SaveAccountChange Failed, DB Lose Connection!");
 
 				int nTimes = 0;
-				while (!m_DBConnection.reconnect())
+				while (!tDBConnection.reconnect())
 				{
 					nTimes++;
 					if (nTimes > 3)
@@ -192,7 +209,7 @@ BOOL CAccountObjectMgr::SaveAccountChange()
 					CommonFunc::Sleep(1000);
 				}
 
-				if(m_DBConnection.execSQL(szSql) < 0)
+				if(tDBConnection.execSQL(szSql) < 0)
 				{
 					CLog::GetInstancePtr()->LogError("CAccountMsgHandler::SaveAccountChange Failed, execSQL Error! Sql:%s", szSql);
 				}
@@ -226,8 +243,6 @@ BOOL CAccountObjectMgr::Uninit()
 	delete m_pThread;
 
 	m_mapNameObj.clear();
-
-	m_DBConnection.close();
 
 	Clear();
 
