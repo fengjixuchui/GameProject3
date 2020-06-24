@@ -27,7 +27,7 @@ BOOL CGameService::Init()
 		return FALSE;
 	}
 
-	CLog::GetInstancePtr()->LogError("---------服务器开始启动--------");
+	CLog::GetInstancePtr()->LogInfo("---------服务器开始启动--------");
 	if(!CConfigFile::GetInstancePtr()->Load("servercfg.ini"))
 	{
 		CLog::GetInstancePtr()->LogError("配制文件加载失败!");
@@ -108,30 +108,11 @@ BOOL CGameService::Uninit()
 	return TRUE;
 }
 
-// BOOL CGameService::SendHttpRequest(std::string host, INT32 nPort, std::string strData)
-// {
-// 	ServiceBase::GetInstancePtr()->ConnectTo(host, nPort);
-//
-//
-// }
-
-// BOOL WINAPI HandlerCloseEvent(DWORD dwCtrlType)
-// {
-// 	if (dwCtrlType == CTRL_CLOSE_EVENT)
-// 	{
-// 		CGameService::GetInstancePtr()->Uninit();
-// 	}
-// 	return FALSE;
-// }
-// SetConsoleCtrlHandler(HandlerCloseEvent, TRUE);
-
 BOOL CGameService::Run()
 {
-	while(TRUE)
+	while (TRUE)
 	{
 		ServiceBase::GetInstancePtr()->Update();
-
-		m_WatchMsgHandler.OnUpdate(CommonFunc::GetTickCount());
 
 		CommonFunc::Sleep(1);
 	}

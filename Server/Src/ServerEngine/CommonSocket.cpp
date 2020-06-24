@@ -22,7 +22,7 @@ BOOL    CommonSocket::SetSocketBlock(SOCKET hSocket, BOOL bBlock)
 	ioctlsocket(hSocket, FIONBIO, &iMode);
 #else
 	int flags = fcntl(hSocket, F_GETFL, 0);
-	fcntl(hSocket, F_SETFL, bBlock ? (flags | O_NONBLOCK) : (flags & (~O_NONBLOCK)));
+	fcntl(hSocket, F_SETFL, bBlock ? (flags & (~O_NONBLOCK)) : (flags | O_NONBLOCK));
 #endif
 
 	return TRUE;
@@ -144,12 +144,12 @@ std::string CommonSocket::GetLocalIP()
 
 void   CommonSocket::ShutDownSend(SOCKET hSocket)
 {
-	shutdown(hSocket, 0);
+	shutdown(hSocket, 1);
 }
 
 void   CommonSocket::ShutDownRecv(SOCKET hSocket)
 {
-	shutdown(hSocket, 1);
+	shutdown(hSocket, 0);
 }
 
 
@@ -229,24 +229,6 @@ BOOL CommonSocket::IsSocketValid(SOCKET hSocket)
 	}
 
 	return TRUE;
-}
-
-std::string  CommonSocket::GetLastErrorStr(INT32 nError)
-{
-	std::string strErrorText;
-#ifdef WIN32
-	LPVOID lpMsgBuf;
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, nError,
-	              MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR) &lpMsgBuf, 0, NULL);
-
-	strErrorText = (LPTSTR)lpMsgBuf;
-
-	LocalFree(lpMsgBuf);
-#else
-	strErrorText = strerror(nError);
-#endif
-
-	return strErrorText;
 }
 
 UINT32  CommonSocket::IpAddrStrToInt(CHAR* pszIpAddr)

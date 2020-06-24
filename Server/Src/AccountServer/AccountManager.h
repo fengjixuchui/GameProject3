@@ -39,13 +39,15 @@ public:
 
 	CAccountObject*		GetAccountObject(const std::string& name, UINT32 dwChannel);
 
-	BOOL				SaveAccountChange();
+	BOOL				SaveAccountThread();
 
 	BOOL				Init();
 
 	BOOL				Uninit();
 
 	BOOL				IsRun();
+
+	BOOL                CheckAccountName(const std::string& strName);
 
 public:
 

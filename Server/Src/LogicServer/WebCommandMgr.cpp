@@ -13,6 +13,7 @@
 #include "../Message/Game_Define.pb.h"
 #include "SimpleManager.h"
 #include "PayManager.h"
+#include "MailManager.h"
 
 CWebCommandMgr::CWebCommandMgr()
 {
@@ -94,18 +95,42 @@ BOOL CWebCommandMgr::OnMsgGmCommandReq(NetPacket* pNetPacket)
 	switch (eWebAction)
 	{
 		case EWA_RELOAD_TABLE:
+		{
 			CGameSvrMgr::GetInstancePtr()->BroadMsgToAll(MSG_PHP_GM_COMMAND_REQ, szMsgBuf, pNetPacket->m_pDataBuffer->GetBodyLenth());
 			OnGmReloadTable(Params, pNetPacket->m_dwConnID);
-			break;
+		}
+		break;
 		case EWA_SEAL_ROLE:
+		{
 			OnGmSealRole(Params, pNetPacket->m_dwConnID);
-			break;
+		}
+		break;
+		case EWA_SINGLE_MAIL:           //单发邮件
+		{
+			OnGmSingleMail(Params, pNetPacket->m_dwConnID);
+		}
+		break;
+		case EWA_GROUP_MAIL:           //群发邮件
+		{
+			OnGmGroupMail(Params, pNetPacket->m_dwConnID);
+		}
+		break;
+		case EWA_GM_COMMAND:           //后台发的GM指令
+		{
+			OnGmCommand(Params, pNetPacket->m_dwConnID);
+		}
+		break;
 		case EWA_PAY_CALLBACK:
+		{
 			SendWebResult(pNetPacket->m_dwConnID, EWR_SUCCESSED);
 			CPayManager::GetInstancePtr()->OnGmPayCallBack(Params, pNetPacket->m_dwConnID);
+		}
+		break;
 		default:
+		{
 			SendWebResult(pNetPacket->m_dwConnID, EWR_INVALID_ACT);
-			break;
+		}
+		break;
 	}
 
 	return TRUE;
@@ -144,6 +169,94 @@ void CWebCommandMgr::OnGmSealRole(HttpParameter& hParams, UINT32 nConnID)
 		CLog::GetInstancePtr()->LogError("CWebCommandMgr::OnGmSealRole Invalid roleid and Invalid rolename");
 		return;
 	}
+
+	return;
+}
+
+void CWebCommandMgr::OnGmSingleMail(HttpParameter& hParams, UINT32 nConnID)
+{
+	ERROR_RETURN_NONE(nConnID != 0);
+	SendWebResult(nConnID, EWR_SUCCESSED);
+	UINT64 uRoleID = hParams.GetLongValue("roleid");
+	std::string strRoleName = hParams.GetStrValue("rolename");
+	std::string strTitle = hParams.GetStrValue("title");
+	std::string strContent = hParams.GetStrValue("content");
+	INT32 strLanguage = hParams.GetIntValue("language");
+
+	UINT32 nItem[4] = { 0 };
+	nItem[0] = hParams.GetIntValue("itemid1");
+	nItem[1] = hParams.GetIntValue("itemid2");
+	nItem[2] = hParams.GetIntValue("itemid3");
+	nItem[3] = hParams.GetIntValue("itemid4");
+
+	UINT32 nItemNum[4] = { 0 };
+	nItemNum[0] = hParams.GetIntValue("itemid1");
+	nItemNum[1] = hParams.GetIntValue("itemid2");
+	nItemNum[2] = hParams.GetIntValue("itemid3");
+	nItemNum[3] = hParams.GetIntValue("itemid4");
+
+	std::vector<StMailItem> vtItems = { {nItem[0], nItemNum[0] }, {nItem[1], nItemNum[1]}, {nItem[2], nItemNum[2]}, {nItem[3], nItemNum[3]} };
+
+	CMailManager::GetInstancePtr()->SendSingleMail(uRoleID, "GM", strTitle, strContent, vtItems);
+
+
+	return;
+}
+
+void CWebCommandMgr::OnGmGroupMail(HttpParameter& hParams, UINT32 nConnID)
+{
+	ERROR_RETURN_NONE(nConnID != 0);
+	SendWebResult(nConnID, EWR_SUCCESSED);
+	UINT64 uRoleID = hParams.GetLongValue("roleid");
+	std::string strRoleName = hParams.GetStrValue("rolename");
+	std::string strTitle = hParams.GetStrValue("title");
+	std::string strContent = hParams.GetStrValue("content");
+	INT32 strLanguage = hParams.GetIntValue("language");
+	INT32 nGroupID = hParams.GetIntValue("groupid");
+
+	UINT32 nItem[4] = { 0 };
+	nItem[0] = hParams.GetIntValue("itemid1");
+	nItem[1] = hParams.GetIntValue("itemid2");
+	nItem[2] = hParams.GetIntValue("itemid3");
+	nItem[3] = hParams.GetIntValue("itemid4");
+
+	UINT32 nItemNum[4] = { 0 };
+	nItemNum[0] = hParams.GetIntValue("itemid1");
+	nItemNum[1] = hParams.GetIntValue("itemid2");
+	nItemNum[2] = hParams.GetIntValue("itemid3");
+	nItemNum[3] = hParams.GetIntValue("itemid4");
+
+	std::vector<StMailItem> vtItems = { {nItem[0], nItemNum[0] }, {nItem[1], nItemNum[1]}, {nItem[2], nItemNum[2]}, {nItem[3], nItemNum[3]} };
+
+	CMailManager::GetInstancePtr()->SendGroupMail(nGroupID, "GM", strTitle, strContent, vtItems);
+	return;
+}
+
+void CWebCommandMgr::OnGmCommand(HttpParameter& hParams, UINT32 nConnID)
+{
+	std::string strRoleName = hParams.GetStrValue("role_name");
+
+	std::string strCmd = hParams.GetStrValue("gm_command");
+
+	std::vector<std::string>  vtString;
+
+	CommonConvert::SpliteString(strCmd, "%20", vtString);
+
+	CPlayerObject* pPlayer = NULL;
+
+	if (strRoleName != "@@")
+	{
+		UINT64 uRoleID = CSimpleManager::GetInstancePtr()->GetRoleIDByName(strRoleName);
+		if (uRoleID == 0)
+		{
+			SendWebResult(nConnID, EWR_FAILURE);
+			return;
+		}
+
+		pPlayer = CPlayerManager::GetInstancePtr()->GetPlayer(uRoleID);
+	}
+
+	CWebCommandMgr::GetInstancePtr()->FireGMFunc(pPlayer, vtString);
 
 	return;
 }

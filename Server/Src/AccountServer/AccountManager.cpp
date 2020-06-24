@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "AccountManager.h"
+#include <regex>
 
 CAccountObjectMgr::CAccountObjectMgr()
 {
@@ -134,6 +135,12 @@ BOOL CAccountObjectMgr::SetLastServer(UINT64 uAccountID, INT32 ServerID)
 
 	CAccountObject* pAccObj = GetAccountObjectByID(uAccountID);
 	ERROR_RETURN_FALSE(pAccObj != NULL);
+
+	if (pAccObj->m_dwLastSvrID[0] == ServerID)
+	{
+		return TRUE;
+	}
+
 	pAccObj->m_dwLastSvrID[1] = pAccObj->m_dwLastSvrID[0];
 	pAccObj->m_dwLastSvrID[0] = ServerID;
 	m_ArrChangedAccount.push(pAccObj);
@@ -162,7 +169,7 @@ CAccountObject* CAccountObjectMgr::AddAccountObject(UINT64 u64ID, const CHAR* pS
 	return pObj;
 }
 
-BOOL CAccountObjectMgr::SaveAccountChange()
+BOOL CAccountObjectMgr::SaveAccountThread()
 {
 	std::string strHost = CConfigFile::GetInstancePtr()->GetStringValue("mysql_acc_svr_ip");
 	UINT32 nPort = CConfigFile::GetInstancePtr()->GetIntValue("mysql_acc_svr_port");
@@ -184,37 +191,30 @@ BOOL CAccountObjectMgr::SaveAccountChange()
 
 		CHAR szSql[SQL_BUFF_LEN] = { 0 };
 
-		if(m_ArrChangedAccount.size())
+		if (m_ArrChangedAccount.size())
+		{
+			if (!tDBConnection.ping())
+			{
+				if (!tDBConnection.reconnect())
+				{
+					CommonFunc::Sleep(1000);
+					continue;
+				}
+			}
 
-			while(m_ArrChangedAccount.pop(pAccount) && (pAccount != NULL))
+			while (m_ArrChangedAccount.pop(pAccount) && (pAccount != NULL))
 			{
 				snprintf(szSql, SQL_BUFF_LEN, "replace into account(id, name, password, lastsvrid1, lastsvrid2, channel, create_time, seal_end_time) values('%lld','%s','%s','%d','%d', '%d', '%s','%s')",
 				         pAccount->m_ID, pAccount->m_strName.c_str(), pAccount->m_strPassword.c_str(), pAccount->m_dwLastSvrID[0], pAccount->m_dwLastSvrID[1], pAccount->m_dwChannel, CommonFunc::TimeToString(pAccount->m_uCreateTime).c_str(), CommonFunc::TimeToString(pAccount->m_uSealTime).c_str());
 
-				if(tDBConnection.execSQL(szSql) > 0)
+				if (tDBConnection.execSQL(szSql) > 0)
 				{
 					continue;
 				}
 
-				CLog::GetInstancePtr()->LogError("CAccountMsgHandler::SaveAccountChange Failed, DB Lose Connection!");
-
-				int nTimes = 0;
-				while (!tDBConnection.reconnect())
-				{
-					nTimes++;
-					if (nTimes > 3)
-					{
-						break;
-					}
-					CommonFunc::Sleep(1000);
-				}
-
-				if(tDBConnection.execSQL(szSql) < 0)
-				{
-					CLog::GetInstancePtr()->LogError("CAccountMsgHandler::SaveAccountChange Failed, execSQL Error! Sql:%s", szSql);
-				}
+				CLog::GetInstancePtr()->LogError("CAccountMsgHandler::SaveAccountChange Failed! Reason: %s", tDBConnection.GetErrorMsg());
 			}
-
+		}
 		CommonFunc::Sleep(10);
 	}
 
@@ -227,7 +227,7 @@ BOOL CAccountObjectMgr::Init()
 
 	m_IsRun = TRUE;
 
-	m_pThread = new std::thread(&CAccountObjectMgr::SaveAccountChange, this);
+	m_pThread = new std::thread(&CAccountObjectMgr::SaveAccountThread, this);
 
 	ERROR_RETURN_FALSE(m_pThread != NULL);
 
@@ -252,6 +252,21 @@ BOOL CAccountObjectMgr::Uninit()
 BOOL CAccountObjectMgr::IsRun()
 {
 	return m_IsRun;
+}
+
+BOOL CAccountObjectMgr::CheckAccountName(const std::string& strName)
+{
+	if (strName.size() < 6)
+	{
+		return FALSE;
+	}
+
+	if (!std::regex_match(strName.c_str(), std::regex("([a-zA-Z0-9]+)")))
+	{
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 CAccountObject* CAccountObjectMgr::GetAccountObject(const std::string& name, UINT32 dwChannel )

@@ -68,7 +68,6 @@ VOID CLogicMsgHandler::RegisterMessageHanler()
 	CMsgHandlerManager::GetInstancePtr()->RegisterMessageHandle(MSG_BACK_TO_CITY_REQ, &CLogicMsgHandler::OnMsgBackToCityReq, this);
 	CMsgHandlerManager::GetInstancePtr()->RegisterMessageHandle(MSG_CHAT_MESSAGE_REQ, &CLogicMsgHandler::OnMsgChatMessageReq, this);
 	CMsgHandlerManager::GetInstancePtr()->RegisterMessageHandle(MSG_ROLE_RECONNECT_REQ, &CLogicMsgHandler::OnMsgReconnectReq, this);
-	CMsgHandlerManager::GetInstancePtr()->RegisterMessageHandle(MSG_WATCH_HEART_BEAT_ACK, &CLogicMsgHandler::OnMsgWatchHeartBeatAck, this);
 }
 
 BOOL CLogicMsgHandler::OnMsgSelectServerReq(NetPacket* pNetPacket)
@@ -177,7 +176,7 @@ BOOL CLogicMsgHandler::OnMsgRoleCreateReq(NetPacket* pNetPacket)
 
 	if (CSimpleManager::GetInstancePtr()->CheckNameExist(Req.name()))
 	{
-		Ack.set_retcode(MRC_NAME_EXIST);
+		Ack.set_retcode(MRC_ROLE_NAME_EXIST);
 		ServiceBase::GetInstancePtr()->SendMsgProtoBuf(pNetPacket->m_dwConnID, MSG_ROLE_CREATE_ACK, 0, pHeader->dwUserData, Ack);
 		return TRUE;
 	}
@@ -480,10 +479,3 @@ BOOL CLogicMsgHandler::OnMsgReconnectReq( NetPacket* pNetPacket )
 	return TRUE;
 }
 
-BOOL CLogicMsgHandler::OnMsgWatchHeartBeatAck(NetPacket* pNetPacket)
-{
-	WatchHeartBeatAck Ack;
-	Ack.ParsePartialFromArray(pNetPacket->m_pDataBuffer->GetData(), pNetPacket->m_pDataBuffer->GetBodyLenth());
-
-	return TRUE;
-}

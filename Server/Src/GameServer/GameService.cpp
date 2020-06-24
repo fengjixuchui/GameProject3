@@ -8,14 +8,13 @@
 #include "HttpParameter.h"
 #include "CommonConvert.h"
 #include "WebActionDef.h"
+#include "WatcherClient.h"
 
 CGameService::CGameService(void)
 {
 	m_dwLogicConnID		= 0;
 	m_dwProxyConnID		= 0;
 	m_dwServerID		= 0;
-	m_dwWatchSvrConnID	= 0;
-	m_dwWatchIndex		= 0;
 }
 
 CGameService::~CGameService(void)
@@ -29,13 +28,6 @@ CGameService* CGameService::GetInstancePtr()
 	return &_GameService;
 }
 
-BOOL CGameService::SetWatchIndex(UINT32 nIndex)
-{
-	m_dwWatchIndex = nIndex;
-
-	return TRUE;
-}
-
 BOOL CGameService::Init(UINT32 dwServerID, UINT32 dwPort)
 {
 	CommonFunc::SetCurrentWorkDir("");
@@ -45,7 +37,7 @@ BOOL CGameService::Init(UINT32 dwServerID, UINT32 dwPort)
 		return FALSE;
 	}
 
-	CLog::GetInstancePtr()->LogError("---------服务器开始启动-ServerID:%d--Port:%d--------", dwServerID, dwPort);
+	CLog::GetInstancePtr()->LogInfo("---------服务器开始启动-ServerID:%d--Port:%d--------", dwServerID, dwPort);
 
 	if(!CConfigFile::GetInstancePtr()->Load("servercfg.ini"))
 	{
@@ -91,10 +83,7 @@ BOOL CGameService::OnNewConnect(UINT32 nConnID)
 		return TRUE;
 	}
 
-	if (nConnID == m_dwWatchSvrConnID)
-	{
-		SendWatchHeartBeat();
-	}
+	CWatcherClient::GetInstancePtr()->OnNewConnect(nConnID);
 
 	return TRUE;
 }
@@ -111,10 +100,7 @@ BOOL CGameService::OnCloseConnect(UINT32 nConnID)
 		m_dwProxyConnID = 0;
 	}
 
-	if (nConnID == m_dwWatchSvrConnID)
-	{
-		m_dwWatchSvrConnID = 0;
-	}
+	CWatcherClient::GetInstancePtr()->OnCloseConnect(nConnID);
 
 	return TRUE;
 }
@@ -125,7 +111,7 @@ BOOL CGameService::OnSecondTimer()
 
 	ConnectToProxySvr();
 
-	SendWatchHeartBeat();
+	CWatcherClient::GetInstancePtr()->OnSecondTimer();
 
 	return TRUE;
 }
@@ -135,8 +121,12 @@ BOOL CGameService::DispatchPacket(NetPacket* pNetPacket)
 	switch(pNetPacket->m_dwMsgID)
 	{
 			PROCESS_MESSAGE_ITEM(MSG_GASVR_REGTO_PROXY_ACK, OnMsgRegToProxyAck)
-			PROCESS_MESSAGE_ITEM(MSG_WATCH_HEART_BEAT_ACK,  OnMsgWatchHeartBeatAck)
 			PROCESS_MESSAGE_ITEM(MSG_PHP_GM_COMMAND_REQ,    OnMsgWebCommandReq)
+	}
+
+	if (CWatcherClient::GetInstancePtr()->DispatchPacket(pNetPacket))
+	{
+		return TRUE;
 	}
 
 	if (m_SceneManager.DispatchPacket(pNetPacket))
@@ -156,7 +146,7 @@ BOOL CGameService::Uninit()
 
 BOOL CGameService::Run()
 {
-	while(TRUE)
+	while(CWatcherClient::GetInstancePtr()->IsRun())
 	{
 		ServiceBase::GetInstancePtr()->Update();
 
@@ -191,7 +181,7 @@ BOOL CGameService::ConnectToLogicSvr()
 	{
 		return TRUE;
 	}
-	UINT32 nLogicPort = CConfigFile::GetInstancePtr()->GetIntValue("logic_svr_port");
+	UINT32 nLogicPort = CConfigFile::GetInstancePtr()->GetRealNetPort("logic_svr_port");
 	ERROR_RETURN_FALSE(nLogicPort > 0);
 	std::string strLogicIp = CConfigFile::GetInstancePtr()->GetStringValue("logic_svr_ip");
 	CConnection* pConn = ServiceBase::GetInstancePtr()->ConnectTo(strLogicIp, nLogicPort);
@@ -207,7 +197,7 @@ BOOL CGameService::ConnectToProxySvr()
 	{
 		return TRUE;
 	}
-	UINT32 nProxyPort = CConfigFile::GetInstancePtr()->GetIntValue("proxy_svr_port");
+	UINT32 nProxyPort = CConfigFile::GetInstancePtr()->GetRealNetPort("proxy_svr_port");
 	ERROR_RETURN_FALSE(nProxyPort > 0);
 	std::string strProxyIp = CConfigFile::GetInstancePtr()->GetStringValue("proxy_svr_ip");
 	CConnection* pConn = ServiceBase::GetInstancePtr()->ConnectTo(strProxyIp, nProxyPort);
@@ -249,42 +239,6 @@ BOOL CGameService::OnMsgRegToProxyAck(NetPacket* pNetPacket)
 	return TRUE;
 }
 
-BOOL CGameService::SendWatchHeartBeat()
-{
-	if (m_dwWatchIndex == 0)
-	{
-		return TRUE;
-	}
-
-	if (m_dwWatchSvrConnID == 0)
-	{
-		ConnectToWatchServer();
-		return TRUE;
-	}
-
-	WatchHeartBeatReq Req;
-	Req.set_data(m_dwWatchIndex);
-	Req.set_processid(CommonFunc::GetCurProcessID());
-	ServiceBase::GetInstancePtr()->SendMsgProtoBuf(m_dwWatchSvrConnID, MSG_WATCH_HEART_BEAT_REQ, 0, 0, Req);
-	return TRUE;
-}
-
-BOOL CGameService::OnMsgWatchHeartBeatAck(NetPacket* pNetPacket)
-{
-	WatchHeartBeatAck Ack;
-	Ack.ParsePartialFromArray(pNetPacket->m_pDataBuffer->GetData(), pNetPacket->m_pDataBuffer->GetBodyLenth());
-
-	return TRUE;
-}
-
-BOOL CGameService::OnMsgGmStopServerReq(NetPacket* pNetPacket)
-{
-	GmStopServerReq Req;
-	Req.ParsePartialFromArray(pNetPacket->m_pDataBuffer->GetData(), pNetPacket->m_pDataBuffer->GetBodyLenth());
-	return TRUE;
-}
-
-
 BOOL CGameService::OnMsgWebCommandReq(NetPacket* pNetPacket)
 {
 	CHAR szMsgBuf[1024] = { 0 };
@@ -306,22 +260,5 @@ BOOL CGameService::OnMsgWebCommandReq(NetPacket* pNetPacket)
 		break;
 	}
 
-	return TRUE;
-}
-
-
-
-BOOL CGameService::ConnectToWatchServer()
-{
-	if (m_dwWatchSvrConnID != 0)
-	{
-		return TRUE;
-	}
-	UINT32 nWatchPort = CConfigFile::GetInstancePtr()->GetIntValue("watch_svr_port");
-	ERROR_RETURN_FALSE(nWatchPort > 0);
-	std::string strWatchIp = CConfigFile::GetInstancePtr()->GetStringValue("watch_svr_ip");
-	CConnection* pConnection = ServiceBase::GetInstancePtr()->ConnectTo(strWatchIp, nWatchPort);
-	ERROR_RETURN_FALSE(pConnection != NULL);
-	m_dwWatchSvrConnID = pConnection->GetConnectionID();
 	return TRUE;
 }

@@ -103,7 +103,7 @@ BOOL CConnection::DoReceive()
 			}
 			else
 			{
-				CLog::GetInstancePtr()->LogError("读失败， 可能连接己断开 原因:%s!!", CommonSocket::GetLastErrorStr(nErr).c_str());
+				CLog::GetInstancePtr()->LogError("读失败， 可能连接己断开 原因:%s!!", CommonFunc::GetLastErrorStr(nErr).c_str());
 
 				return FALSE;
 			}
@@ -399,7 +399,7 @@ BOOL CConnection::CheckHeader(CHAR* m_pPacket)
 	3.包的序号
 	*/
 	PacketHeader* pHeader = (PacketHeader*)m_pBufPos;
-	if (pHeader->CheckCode != 0x88)
+	if (pHeader->CheckCode != CODE_VALUE)
 	{
 		return FALSE;
 	}
@@ -525,7 +525,7 @@ BOOL CConnection::DoSend()
 		if(errCode != ERROR_IO_PENDING)
 		{
 			Close();
-			CLog::GetInstancePtr()->LogError("发送线程:发送失败, 连接关闭原因:%s!", CommonSocket::GetLastErrorStr(errCode).c_str());
+			CLog::GetInstancePtr()->LogError("发送线程:发送失败, 连接关闭原因:%s!", CommonFunc::GetLastErrorStr(errCode).c_str());
 		}
 	}
 
