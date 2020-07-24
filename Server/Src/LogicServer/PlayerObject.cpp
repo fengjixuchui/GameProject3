@@ -25,6 +25,7 @@
 #include "../Message/Msg_ID.pb.h"
 #include "../Message/Msg_RetCode.pb.h"
 #include "MailManager.h"
+#include "GameLogManager.h"
 
 
 
@@ -101,6 +102,11 @@ BOOL CPlayerObject::OnLogin()
 	CRoleModule* pRoleModule = (CRoleModule*)GetModuleByType(MT_ROLE);
 	ERROR_RETURN_VALUE(pRoleModule != NULL, MRC_UNKNOW_ERROR);
 
+	if (pRoleModule->GetLastLogoffTime() < pRoleModule->GetLastLogonTime())
+	{
+		pRoleModule->SetLastLogoffTime(pRoleModule->GetLastLogonTime() + 5);
+	}
+
 	if (!CommonFunc::IsSameDay(pRoleModule->GetLastLogoffTime()))
 	{
 		for (int i = MT_ROLE; i < MT_END; i++)
@@ -122,6 +128,8 @@ BOOL CPlayerObject::OnLogin()
 	SendRoleLoginAck();
 
 	CGameSvrMgr::GetInstancePtr()->SendPlayerToMainCity(m_u64ID, GetCityCopyID());
+
+	CGameLogManager::GetInstancePtr()->LogRoleLogin(this);
 
 	return TRUE;
 }
@@ -297,7 +305,6 @@ BOOL CPlayerObject::SetConnectID(UINT32 dwProxyID, UINT32 dwClientID)
 	return TRUE;
 }
 
-
 CModuleBase* CPlayerObject::GetModuleByType(UINT32 dwModuleType)
 {
 	ERROR_RETURN_NULL(dwModuleType < (UINT32)m_MoudleList.size());
@@ -316,6 +323,14 @@ UINT32 CPlayerObject::GetCityCopyID()
 	ERROR_RETURN_FALSE(pModule != NULL);
 	ERROR_RETURN_FALSE(pModule->m_pRoleDataObject != NULL);
 	return pModule->m_pRoleDataObject->m_CityCopyID;
+}
+
+UINT64 CPlayerObject::GetAccountID()
+{
+	CRoleModule* pModule = (CRoleModule*)GetModuleByType(MT_ROLE);
+	ERROR_RETURN_FALSE(pModule != NULL);
+	ERROR_RETURN_FALSE(pModule->m_pRoleDataObject != NULL);
+	return pModule->m_pRoleDataObject->m_uAccountID;
 }
 
 UINT32 CPlayerObject::GetActorID()
@@ -492,6 +507,12 @@ BOOL CPlayerObject::IsOnline()
 	}
 
 	return m_IsOnline;
+}
+
+BOOL CPlayerObject::SetOnline(BOOL bOnline)
+{
+	m_IsOnline = TRUE;
+	return TRUE;
 }
 
 BOOL CPlayerObject::NotifyChange()

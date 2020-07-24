@@ -45,6 +45,8 @@ public:
 
 	BOOL		IsOnline();
 
+	BOOL        SetOnline(BOOL bOnline);
+
 	BOOL		NotifyChange();
 
 public:
@@ -69,6 +71,7 @@ public:
 
 public:
 	UINT64			GetRoleID();
+	UINT64          GetAccountID();
 	UINT32			GetCityCopyID();
 	UINT32			GetActorID();
 	CHAR*			GetName();
@@ -90,7 +93,6 @@ public:
 
 	INT32       m_Propertys[PROPERTY_NUM];
 
-	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 	//背包方法
