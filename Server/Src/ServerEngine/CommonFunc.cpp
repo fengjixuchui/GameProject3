@@ -59,9 +59,7 @@ BOOL CommonFunc::SetCurrentWorkDir(std::string strPath)
 
 UINT64 CommonFunc::GetCurrTime()
 {
-	time_t t;
-
-	t = time(0);
+	time_t t = time(0);
 
 	return (UINT64)t;
 }
@@ -75,19 +73,17 @@ UINT64 CommonFunc::GetCurMsTime()
 
 tm CommonFunc::GetCurrTmTime()
 {
-	time_t rawtime;
-	struct tm* timeinfo;
+	time_t t = (time_t)GetCurrTime();
 
-	time (&rawtime);
-	timeinfo = localtime(&rawtime);
+	struct tm _tm_time;
+	_tm_time = *localtime(&t);
 
-	return *timeinfo;
+	return _tm_time;
 }
 
 UINT64 CommonFunc::GetDayBeginTime()
 {
-	time_t t;
-	t = time(0);
+	time_t t = time(0);
 	tm* t_tm = localtime(&t);
 	t_tm->tm_hour = 0;
 	t_tm->tm_min = 0;
@@ -98,17 +94,15 @@ UINT64 CommonFunc::GetDayBeginTime()
 
 UINT64 CommonFunc::GetWeekBeginTime()
 {
-	time_t t;
-	t = time(0);
+	time_t t = time(0);
 	tm* t_tm = localtime(&t);
 	return (UINT64)t - (t_tm->tm_wday == 0 ? 6 : t_tm->tm_wday - 1) * 86400 - t_tm->tm_hour * 3600 - t_tm->tm_min * 60 - t_tm->tm_sec;
 }
 
 time_t CommonFunc::YearTimeToSec(INT32 nYear, INT32 nMonth, INT32 nDay, INT32 nHour, INT32 nMin, INT32 nSec)
 {
-	time_t timer;
-	time(&timer);
-	tm* t_tm = localtime(&timer);
+	time_t t = time(0);
+	tm* t_tm = localtime(&t);
 
 	tm newtm;
 	newtm.tm_year = (nYear < 0) ? t_tm->tm_year : nYear - 1900;
@@ -461,7 +455,7 @@ HANDLE CommonFunc::CreateShareMemory(UINT32 dwModuleID, INT32 nPage, INT32 nSize
 	HANDLE hShare = NULL;
 #ifdef WIN32
 	CHAR szMemName[128] = {0};
-	snprintf(szMemName, 128, "SM_%d", dwModuleID << 16 | nPage);
+	snprintf(szMemName, 128, "SM_%d", (dwModuleID << 16) | nPage);
 	hShare = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, nSize, szMemName);
 	if (hShare != NULL)
 	{
@@ -472,7 +466,7 @@ HANDLE CommonFunc::CreateShareMemory(UINT32 dwModuleID, INT32 nPage, INT32 nSize
 		}
 	}
 #else
-	hShare = shmget(dwModuleID << 16 | nPage, nSize, 0666 | IPC_CREAT | IPC_EXCL);
+	hShare = shmget((dwModuleID << 16) | nPage, nSize, 0666 | IPC_CREAT | IPC_EXCL);
 	if (hShare == -1)
 	{
 		hShare = NULL;
@@ -610,6 +604,35 @@ BOOL CommonFunc::KillProcess(UINT64 dwPid)
 	CloseHandle(hPrc);
 #else
 	kill(dwPid, SIGKILL);
+#endif
+	return TRUE;
+}
+
+BOOL CommonFunc::IsProcessExist(UINT64 dwPid)
+{
+#ifdef WIN32
+	HANDLE hPrc;
+	if (0 == dwPid)
+	{
+		return FALSE;
+	}
+
+	hPrc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)dwPid);
+	if (hPrc == NULL)
+	{
+		return FALSE;
+	}
+	CloseHandle(hPrc);
+#else
+	if (kill(dwPid, 0) < 0)
+	{
+		return FALSE;
+	}
+
+	if (errno == ESRCH)
+	{
+		return FALSE;
+	}
 #endif
 	return TRUE;
 }
