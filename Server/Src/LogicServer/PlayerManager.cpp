@@ -7,6 +7,11 @@
 
 CPlayerManager::CPlayerManager()
 {
+	m_dwMaxCacheNum = CConfigFile::GetInstancePtr()->GetIntValue("max_cache_num");
+	if (m_dwMaxCacheNum <= 10)
+	{
+		m_dwMaxCacheNum = 3000;
+	}
 	TimerManager::GetInstancePtr()->AddFixTimer(0, 1, &CPlayerManager::ZeroTimer, this);
 }
 
@@ -40,7 +45,7 @@ CPlayerObject* CPlayerManager::CreatePlayerByID( UINT64 u64RoleID )
 
 INT32 CPlayerManager::GetOnlineCount()
 {
-	CPlayerManager::TNodeTypePtr pNode = CPlayerManager::GetInstancePtr()->MoveFirst();
+	TNodeTypePtr pNode = MoveFirst();
 	if (pNode == NULL)
 	{
 		return 0;
@@ -48,7 +53,7 @@ INT32 CPlayerManager::GetOnlineCount()
 
 	INT32 nCount = 0;
 	CPlayerObject* pTempObj = NULL;
-	for (; pNode != NULL; pNode = CPlayerManager::GetInstancePtr()->MoveNext(pNode))
+	for (; pNode != NULL; pNode = MoveNext(pNode))
 	{
 		pTempObj = pNode->GetValue();
 		if (pTempObj == NULL)
@@ -88,12 +93,12 @@ BOOL CPlayerManager::BroadMessageToAll(UINT32 dwMsgID, const google::protobuf::M
 	Nty.set_msgdata(szBuff, pdata.ByteSize());
 	Nty.set_msgid(dwMsgID);
 
-	CPlayerManager::TNodeTypePtr pNode = CPlayerManager::GetInstancePtr()->MoveFirst();
+	TNodeTypePtr pNode = MoveFirst();
 	ERROR_RETURN_FALSE(pNode != NULL);
 
 	UINT32 dwProxyID = 0;
 	CPlayerObject* pTempObj = NULL;
-	for (; pNode != NULL; pNode = CPlayerManager::GetInstancePtr()->MoveNext(pNode))
+	for (; pNode != NULL; pNode = MoveNext(pNode))
 	{
 		pTempObj = pNode->GetValue();
 		ERROR_RETURN_FALSE(pTempObj != NULL);
@@ -119,14 +124,14 @@ BOOL CPlayerManager::BroadMessageToAll(UINT32 dwMsgID, const google::protobuf::M
 
 BOOL CPlayerManager::ZeroTimer(UINT32 nParam)
 {
-	CPlayerManager::TNodeTypePtr pNode = CPlayerManager::GetInstancePtr()->MoveFirst();
+	TNodeTypePtr pNode = MoveFirst();
 	if (pNode == NULL) //一个人也没有
 	{
 		return TRUE;
 	}
 
 	CPlayerObject* pTempObj = NULL;
-	for (; pNode != NULL; pNode = CPlayerManager::GetInstancePtr()->MoveNext(pNode))
+	for (; pNode != NULL; pNode = MoveNext(pNode))
 	{
 		pTempObj = pNode->GetValue();
 		ERROR_RETURN_FALSE(pTempObj != NULL);
@@ -152,11 +157,11 @@ BOOL CPlayerManager::OnUpdate(UINT64 uTick)
 	UINT64 uMinLeaveTime = 0x0fffffffff;
 	UINT64 uReleaseRoleID = 0;
 
-	CPlayerManager::TNodeTypePtr pNode = CPlayerManager::GetInstancePtr()->MoveFirst();
+	TNodeTypePtr pNode = MoveFirst();
 	ERROR_RETURN_FALSE(pNode != NULL);
 
 	CPlayerObject* pTempObj = NULL;
-	for (; pNode != NULL; pNode = CPlayerManager::GetInstancePtr()->MoveNext(pNode))
+	for (; pNode != NULL; pNode = MoveNext(pNode))
 	{
 		pTempObj = pNode->GetValue();
 		ERROR_RETURN_FALSE(pTempObj != NULL);
@@ -178,9 +183,9 @@ BOOL CPlayerManager::OnUpdate(UINT64 uTick)
 		}
 	}
 
-	if (uReleaseRoleID != 0 && GetCount() > 3000)
+	if (uReleaseRoleID != 0 && GetCount() > m_dwMaxCacheNum)
 	{
-		//当内存中的人数超过3000人，就清理一个离线时间最长的玩家
+		//当内存中的人数超过人，就清理一个离线时间最长的玩家
 		ReleasePlayer(uReleaseRoleID);
 	}
 
@@ -189,11 +194,14 @@ BOOL CPlayerManager::OnUpdate(UINT64 uTick)
 
 BOOL CPlayerManager::ReleaseAll()
 {
-	CPlayerManager::TNodeTypePtr pNode = CPlayerManager::GetInstancePtr()->MoveFirst();
-	ERROR_RETURN_FALSE(pNode != NULL);
+	TNodeTypePtr pNode = MoveFirst();
+	if (pNode == NULL)
+	{
+		return TRUE;
+	}
 
 	CPlayerObject* pPlayer = NULL;
-	for (; pNode != NULL; pNode = CPlayerManager::GetInstancePtr()->MoveNext(pNode))
+	for (; pNode != NULL; pNode = MoveNext(pNode))
 	{
 		pPlayer = pNode->GetValue();
 		ERROR_TO_CONTINUE(pPlayer != NULL);

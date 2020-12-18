@@ -83,7 +83,7 @@ tm CommonFunc::GetCurrTmTime()
 
 UINT64 CommonFunc::GetDayBeginTime()
 {
-	time_t t = time(0);
+	time_t t = (time_t)GetCurrTime();
 	tm* t_tm = localtime(&t);
 	t_tm->tm_hour = 0;
 	t_tm->tm_min = 0;
@@ -94,14 +94,14 @@ UINT64 CommonFunc::GetDayBeginTime()
 
 UINT64 CommonFunc::GetWeekBeginTime()
 {
-	time_t t = time(0);
+	time_t t = (time_t)GetCurrTime();
 	tm* t_tm = localtime(&t);
 	return (UINT64)t - (t_tm->tm_wday == 0 ? 6 : t_tm->tm_wday - 1) * 86400 - t_tm->tm_hour * 3600 - t_tm->tm_min * 60 - t_tm->tm_sec;
 }
 
 time_t CommonFunc::YearTimeToSec(INT32 nYear, INT32 nMonth, INT32 nDay, INT32 nHour, INT32 nMin, INT32 nSec)
 {
-	time_t t = time(0);
+	time_t t = (time_t)GetCurrTime();
 	tm* t_tm = localtime(&t);
 
 	tm newtm;
@@ -637,9 +637,31 @@ BOOL CommonFunc::IsProcessExist(UINT64 dwPid)
 	return TRUE;
 }
 
-INT32 CommonFunc::Min(INT32 nValue1, INT32 nValue2)
+UINT32 CommonFunc::GetProcessID(std::string strProcName)
 {
-	return (nValue1 < nValue2) ? nValue1 : nValue2;
+#ifdef WIN32
+	UINT32 dwProcID = 0;
+	HANDLE Snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	PROCESSENTRY32 stProcessEntry;
+	stProcessEntry.dwSize = sizeof(PROCESSENTRY32);
+	BOOL bRet = Process32First(Snapshot, &stProcessEntry);
+	while (bRet)
+	{
+		if(stricmp(strProcName.c_str(), stProcessEntry.szExeFile) == 0)
+		{
+			dwProcID = stProcessEntry.th32ProcessID;
+			break;
+		}
+
+		bRet = Process32Next(Snapshot, &stProcessEntry);
+	}
+
+	CloseHandle(Snapshot);
+
+	return dwProcID;
+#else
+	return 0;
+#endif
 }
 
 BOOL CommonFunc::IsAlreadyRun(std::string strSignName)

@@ -8,10 +8,13 @@
 CGameService::CGameService(void)
 {
 	m_dwLogicConnID		= 0;
+	m_bLogicConnect = FALSE;
 }
 
 CGameService::~CGameService(void)
 {
+	m_dwLogicConnID = 0;
+	m_bLogicConnect = FALSE;
 }
 
 CGameService* CGameService::GetInstancePtr()
@@ -35,6 +38,12 @@ BOOL CGameService::Init()
 	if(!CConfigFile::GetInstancePtr()->Load("servercfg.ini"))
 	{
 		CLog::GetInstancePtr()->LogError("配制文件加载失败!");
+		return FALSE;
+	}
+
+	if (CommonFunc::IsAlreadyRun("ProxyServer" + CConfigFile::GetInstancePtr()->GetStringValue("areaid")))
+	{
+		CLog::GetInstancePtr()->LogError("ProxyServer己经在运行!");
 		return FALSE;
 	}
 
@@ -63,6 +72,10 @@ BOOL CGameService::Init()
 
 BOOL CGameService::OnNewConnect(UINT32 nConnID)
 {
+	if (nConnID == m_dwLogicConnID)
+	{
+		m_bLogicConnect = TRUE;
+	}
 	m_ProxyMsgHandler.OnNewConnect(nConnID);
 
 	CWatcherClient::GetInstancePtr()->OnNewConnect(nConnID);
@@ -125,12 +138,16 @@ BOOL CGameService::ConnectToLogicSvr()
 	CConnection* pConn = ServiceBase::GetInstancePtr()->ConnectTo(strLogicIp, nLogicPort);
 	ERROR_RETURN_FALSE(pConn != NULL);
 	m_dwLogicConnID = pConn->GetConnectionID();
+	pConn->SetConnectionData(1);
 	return TRUE;
 }
 
 BOOL CGameService::Uninit()
 {
 	ServiceBase::GetInstancePtr()->StopNetwork();
+
+	m_ProxyMsgHandler.Uninit();
+
 	google::protobuf::ShutdownProtobufLibrary();
 
 	return TRUE;

@@ -50,7 +50,6 @@ BOOL CWebCommandMgr::DispatchPacket(NetPacket* pNetPacket)
 	switch (pNetPacket->m_dwMsgID)
 	{
 			PROCESS_MESSAGE_ITEM(MSG_PHP_GM_COMMAND_REQ, OnMsgGmCommandReq);
-			PROCESS_MESSAGE_ITEM(MSG_SEAL_ACCOUNT_ACK, OnMsgSealAccountAck);
 	}
 
 
@@ -60,7 +59,7 @@ BOOL CWebCommandMgr::DispatchPacket(NetPacket* pNetPacket)
 BOOL CWebCommandMgr::OnMsgGmCommandReq(NetPacket* pNetPacket)
 {
 	CHAR szMsgBuf[1024] = { 0 };
-	strncpy(szMsgBuf, pNetPacket->m_pDataBuffer->GetData(), pNetPacket->m_pDataBuffer->GetBodyLenth());
+	CommonConvert::StrCopy(szMsgBuf, pNetPacket->m_pDataBuffer->GetData(), pNetPacket->m_pDataBuffer->GetBodyLenth() + 1);
 
 	HttpParameter Params;
 	Params.ParseStringToMap(szMsgBuf);
@@ -85,19 +84,6 @@ BOOL CWebCommandMgr::OnMsgGmCommandReq(NetPacket* pNetPacket)
 	return TRUE;
 }
 
-BOOL CWebCommandMgr::OnMsgSealAccountAck(NetPacket* pPacket)
-{
-	SealAccountAck Ack;
-	Ack.ParsePartialFromArray(pPacket->m_pDataBuffer->GetData(), pPacket->m_pDataBuffer->GetBodyLenth());
-	PacketHeader* pHeader = (PacketHeader*)pPacket->m_pDataBuffer->GetBuffer();
-
-	UINT32 nConnID = pHeader->dwUserData;
-	ERROR_RETURN_TRUE(nConnID != 0);
-
-	SendWebResult(nConnID, EWR_SUCCESSED);
-
-	return TRUE;
-}
 
 void CWebCommandMgr::OnGmSealAccount(HttpParameter& hParams, UINT32 nConnID)
 {

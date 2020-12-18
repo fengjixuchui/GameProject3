@@ -9,7 +9,6 @@
 #define OS_PLATFORM_LINUX
 #endif
 
-
 #ifdef OS_PLATFORM_WINDOWS
 #include <io.h>
 #include <direct.h>
@@ -20,6 +19,7 @@
 #include "Mstcpip.h"
 #include <time.h>
 #include <stdarg.h>
+#include <TlHelp32.h>
 #pragma  comment(lib,"ws2_32")
 #pragma  comment(lib, "Mswsock")
 

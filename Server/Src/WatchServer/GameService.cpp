@@ -34,8 +34,9 @@ BOOL CGameService::Init()
 		return FALSE;
 	}
 
-	if (CommonFunc::IsAlreadyRun("WatchServer" + CConfigFile::GetInstancePtr()->GetIntValue("areaid")))
+	if (CommonFunc::IsAlreadyRun("WatchServer" + CConfigFile::GetInstancePtr()->GetStringValue("areaid")))
 	{
+		CLog::GetInstancePtr()->LogError("WatchServer己经在运行!");
 		return FALSE;
 	}
 
@@ -109,6 +110,9 @@ BOOL CGameService::DispatchPacket(NetPacket* pNetPacket)
 BOOL CGameService::Uninit()
 {
 	ServiceBase::GetInstancePtr()->StopNetwork();
+
+	m_WatchMsgHandler.Uninit();
+
 	google::protobuf::ShutdownProtobufLibrary();
 	return TRUE;
 }

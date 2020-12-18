@@ -192,6 +192,7 @@ BOOL CConnection::ExtractBuffer()
 				m_dwDataLen -= m_pCurBufferSize - m_pCurRecvBuffer->GetTotalLenth();
 				m_pBufPos += m_pCurBufferSize - m_pCurRecvBuffer->GetTotalLenth();
 				m_pCurRecvBuffer->SetTotalLenth(m_pCurBufferSize);
+				m_LastRecvTick = CommonFunc::GetTickCount();
 				m_pDataHandler->OnDataHandle(m_pCurRecvBuffer, GetConnectionID());
 				m_pCurRecvBuffer = NULL;
 			}
@@ -229,6 +230,8 @@ BOOL CConnection::ExtractBuffer()
 			m_pBufPos += dwPacketSize;
 
 			pDataBuffer->SetTotalLenth(dwPacketSize);
+
+			m_LastRecvTick = CommonFunc::GetTickCount();
 
 			m_pDataHandler->OnDataHandle(pDataBuffer, GetConnectionID());
 		}
@@ -304,7 +307,6 @@ BOOL CConnection::HandleRecvEvent(UINT32 dwBytes)
 		return FALSE;
 	}
 #endif
-	m_LastRecvTick = CommonFunc::GetTickCount();
 	return TRUE;
 }
 
@@ -363,6 +365,7 @@ BOOL CConnection::Reset()
 
 	m_pBufPos   = m_pRecvBuf;
 
+	m_LastRecvTick = 0;
 	if(m_pCurRecvBuffer != NULL)
 	{
 		m_pCurRecvBuffer->Release();
@@ -413,18 +416,25 @@ BOOL CConnection::CheckHeader(CHAR* m_pPacket)
 		return FALSE;
 	}
 
-	if (pHeader->dwMsgID > 4999999)
+	if (pHeader->dwMsgID > 399999 || pHeader->dwMsgID == 0)
+	{
+		return FALSE;
+	}
+
+	UINT32 dwPktChkNo = pHeader->dwPacketNo - (pHeader->dwMsgID ^ pHeader->dwSize);
+
+	if (dwPktChkNo <= 0)
 	{
 		return FALSE;
 	}
 
 	if(m_nCheckNo == 0)
 	{
-		m_nCheckNo = pHeader->dwPacketNo - (pHeader->dwMsgID ^ pHeader->dwSize) + 1;
+		m_nCheckNo = dwPktChkNo + 1;
 		return TRUE;
 	}
 
-	if(pHeader->dwPacketNo == (pHeader->dwMsgID ^ pHeader->dwSize) + m_nCheckNo)
+	if(m_nCheckNo == dwPktChkNo)
 	{
 		m_nCheckNo += 1;
 		return TRUE;
@@ -515,10 +525,10 @@ BOOL CConnection::DoSend()
 	int nRet = WSASend(m_hSocket, &DataBuf, 1, &dwSendBytes, 0, (LPOVERLAPPED)&m_IoOverlapSend, NULL);
 	if(nRet == 0) //发送成功
 	{
-		if(dwSendBytes < DataBuf.len)
-		{
-			CLog::GetInstancePtr()->LogError("发送线程:直接发送数据成功send:%d--Len:%d!", dwSendBytes, DataBuf.len);
-		}
+		//if(dwSendBytes < DataBuf.len)
+		//{
+		//	CLog::GetInstancePtr()->LogError("发送线程:直接发送数据成功send:%d--Len:%d!", dwSendBytes, DataBuf.len);
+		//}
 	}
 	else if( nRet == -1 ) //发送出错
 	{
@@ -662,7 +672,10 @@ CConnection* CConnectionMgr::GetConnectionByID( UINT32 dwConnID )
 
 	CConnection* pConnect = m_vtConnList.at(dwIndex == 0 ? (m_vtConnList.size() - 1) : (dwIndex - 1));
 
-	ERROR_RETURN_NULL(pConnect->GetConnectionID() == dwConnID);
+	if (pConnect->GetConnectionID() != dwConnID)
+	{
+		return NULL;
+	}
 
 	return pConnect;
 }
@@ -726,6 +739,16 @@ BOOL CConnectionMgr::CloseAllConnection()
 	for(size_t i = 0; i < m_vtConnList.size(); i++)
 	{
 		pConn = m_vtConnList.at(i);
+		if (!pConn->IsConnectionOK())
+		{
+			continue;
+		}
+
+		if (pConn->m_hSocket == INVALID_SOCKET)
+		{
+			continue;
+		}
+
 		pConn->Close();
 	}
 
@@ -757,15 +780,15 @@ BOOL CConnectionMgr::CheckConntionAvalible()
 
 	for(std::vector<CConnection*>::size_type i = 0; i < m_vtConnList.size(); i++)
 	{
-		CConnection* pTemp = m_vtConnList.at(i);
-		if(!pTemp->IsConnectionOK())
+		CConnection* pConnection = m_vtConnList.at(i);
+		if(!pConnection->IsConnectionOK())
 		{
 			continue;
 		}
 
-		if(curTick > (pTemp->m_LastRecvTick + 30000))
+		if(curTick > (pConnection->m_LastRecvTick + 30000))
 		{
-			pTemp->Close();
+			pConnection->Close();
 		}
 	}
 

@@ -25,6 +25,7 @@ BOOL CWatchMsgHandler::Init(UINT32 dwReserved)
 	if (!LoadProcessList())
 	{
 		CLog::GetInstancePtr()->LogError("Cannot find the processlist.xml!");
+		return FALSE;
 	}
 
 	SetStartWatch(CConfigFile::GetInstancePtr()->GetIntValue("watch_svr_statue"));
@@ -125,6 +126,7 @@ BOOL CWatchMsgHandler::OnMsgServerHeartReq(NetPacket* pNetPacket)
 	ServerProcessInfo& serverData = m_vtProcess[index - 1];
 	serverData.ProcessID = Req.processid();
 	serverData.LastHeartTick = CommonFunc::GetTickCount();
+
 	if (serverData.ProscessStatus == EPS_Starting || serverData.ProscessStatus == EPS_Checking)
 	{
 		serverData.ProscessStatus = EPS_Connected;
@@ -142,7 +144,7 @@ BOOL CWatchMsgHandler::OnMsgServerHeartReq(NetPacket* pNetPacket)
 BOOL CWatchMsgHandler::OnMsgWebCommandReq(NetPacket* pNetPacket)
 {
 	CHAR szMsgBuf[1024] = { 0 };
-	strncpy(szMsgBuf, pNetPacket->m_pDataBuffer->GetData(), pNetPacket->m_pDataBuffer->GetBodyLenth());
+	strncpy(szMsgBuf, pNetPacket->m_pDataBuffer->GetData(), pNetPacket->m_pDataBuffer->GetBodyLenth()+1);
 
 	HttpParameter Params;
 	Params.ParseStringToMap(szMsgBuf);
@@ -379,6 +381,7 @@ BOOL CWatchMsgHandler::LoadProcessList()
 		{
 			continue;
 		}
+
 		ServerData.Params = std::string(pObjectNode->first_attribute("Params")->value());
 		ServerData.BootUpParameter = "start " + ServerData.serverName + " " + ServerData.Params;
 		ServerData.KillAll = CommonConvert::StringToInt(pObjectNode->first_attribute("KillAll")->value());

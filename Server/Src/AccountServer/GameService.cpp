@@ -43,6 +43,12 @@ BOOL CGameService::Init()
 		return FALSE;
 	}
 
+	if (CommonFunc::IsAlreadyRun("AccountServer"))
+	{
+		CLog::GetInstancePtr()->LogError("AccountServer己经在运行!");
+		return FALSE;
+	}
+
 	CLog::GetInstancePtr()->SetLogLevel(CConfigFile::GetInstancePtr()->GetIntValue("account_log_level"));
 
 	UINT16 nPort = CConfigFile::GetInstancePtr()->GetIntValue("account_svr_port");
@@ -53,7 +59,7 @@ BOOL CGameService::Init()
 	}
 
 	INT32  nMaxConn = CConfigFile::GetInstancePtr()->GetIntValue("account_svr_max_con");
-	if(!ServiceBase::GetInstancePtr()->StartNetwork(nPort, nMaxConn, this))
+	if(!ServiceBase::GetInstancePtr()->StartNetwork(nPort, nMaxConn, this, "127.0.0.1"))
 	{
 		CLog::GetInstancePtr()->LogError("启动服务失败!");
 		return FALSE;
@@ -109,11 +115,16 @@ BOOL CGameService::DispatchPacket(NetPacket* pNetPacket)
 
 BOOL CGameService::Uninit()
 {
-	m_AccountMsgHandler.Uninit();
+	CLog::GetInstancePtr()->LogError("==========服务器开始关闭=======================");
 
 	ServiceBase::GetInstancePtr()->StopNetwork();
 
+	m_AccountMsgHandler.Uninit();
+
 	google::protobuf::ShutdownProtobufLibrary();
+
+	CLog::GetInstancePtr()->LogError("==========服务器关闭完成=======================");
+
 	return TRUE;
 }
 

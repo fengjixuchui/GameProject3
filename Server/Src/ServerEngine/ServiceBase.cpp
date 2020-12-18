@@ -70,8 +70,6 @@ BOOL ServiceBase::StartNetwork(UINT16 nPortNum, UINT32 nMaxConn, IPacketDispatch
 
 BOOL ServiceBase::StopNetwork()
 {
-	CLog::GetInstancePtr()->LogError("==========服务器开始关闭=======================");
-
 	CNetManager::GetInstancePtr()->Stop();
 
 	return TRUE;
@@ -179,8 +177,6 @@ BOOL ServiceBase::Update()
 		m_dwLastTick = CommonFunc::GetTickCount();
 	}
 
-	//CConnectionMgr::GetInstancePtr()->CheckConntionAvalible();
-
 	m_QueueLock.Lock();
 	std::swap(m_pRecvDataQueue, m_pDispathQueue);
 	m_QueueLock.Unlock();
@@ -202,15 +198,8 @@ BOOL ServiceBase::Update()
 			}
 			else
 			{
-				//try
-				//{
 				m_dwLastMsgID = item.m_dwMsgID;
 				m_pPacketDispatcher->DispatchPacket(&item);
-				//}
-				//catch (std::exception& e)
-				//{
-				//	CLog::GetInstancePtr()->LogError("DispatchPacket Message Error %s, MessageID:%d", e.what(), item.m_dwMsgID);
-				//}
 
 				item.m_pDataBuffer->Release();
 

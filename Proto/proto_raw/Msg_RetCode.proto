@@ -33,7 +33,8 @@ enum MessageRetCode {
    MRC_NOT_ENOUGH_TIMES    = 203;    //次数不足
    MRC_NOT_ENOUGH_LEVEL    = 204;    //等级不足
    MRC_NOT_ENOUGH_VIPLV    = 205;    //vip等级不足
-   
+   MRC_ERROR_SEAL_ROLE     = 206;   //角色己被封禁
+   MRC_NAME_ERROR_FMT      = 207;   //名字不符合要求
    
    //其它
    MRC_ACCOUNT_NAME_EXIST    = 300;    //账号名己存在
@@ -58,6 +59,9 @@ enum MessageRetCode {
    MRC_SERVER_NOT_AVAILABLE   = 316;   //服务器不可用
    MRC_SERVER_MAINTAIN        = 317;   //服务器维护中
    MRC_SERVER_NO_NEW_ROLE     = 318;   //不允许创建新角色
+   MRC_SEAL_ROLE              = 319;   //角色己被封
+   MRC_SEAL_ACCOUNT           = 320;   //账号己被封
+   MRC_DELETE_ROLE            = 321;   //角色被删除
    
       //礼包码
    MRC_GIFTCODE_AREADY_USED   = 500;    //礼包码己使用
